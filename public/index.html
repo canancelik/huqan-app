@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIOM — Productization & Shield</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#080a12;
+  --panel:#111523;
+  --panel-2:#0e1220;
+  --line:#262d42;
+  --line-2:#2f3a56;
+  --text:#e9ebff;
+  --muted:#8e95b5;
+  --accent:#69d7ff;
+  --accent-2:#9d68ff;
+  --good:#67d39a;
+  --warn:#ffbf69;
+  --bad:#ff6b86;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:radial-gradient(circle at top,#11162a 0,#080a12 45%,#05070d 100%);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+body{display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(17,21,35,.96),rgba(9,11,18,.96));backdrop-filter:blur(16px)}
+.brand{display:flex;flex-direction:column;gap:4px}
+.brand h1{margin:0;font-size:20px;line-height:1.1;letter-spacing:.02em;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand .subtitle{font-size:12px;color:var(--muted)}
+.header-stats{font-size:12px;color:var(--muted);text-align:right}
+.tabs{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(7,9,15,.9);overflow-x:auto;flex-shrink:0}
+.tab{padding:10px 14px;border:1px solid transparent;border-radius:999px;background:rgba(17,21,35,.7);color:var(--muted);font-size:13px;white-space:nowrap;cursor:pointer;transition:all .18s ease}
+.tab:hover{color:var(--text);border-color:var(--line-2)}
+.tab.active{color:var(--text);border-color:rgba(105,215,255,.45);background:linear-gradient(180deg,rgba(30,38,60,.98),rgba(16,20,32,.98));box-shadow:0 0 0 1px rgba(157,104,255,.1) inset}
+.panel{display:none;flex:1;min-height:0;overflow:hidden}
+.panel.active{display:flex;flex-direction:column}
+.panel.scrollable{overflow:auto}
+.shell{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.95fr);gap:14px;padding:14px;min-height:0;flex:1}
+.card{background:linear-gradient(180deg,rgba(17,21,35,.98),rgba(12,15,25,.98));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 12px 30px rgba(0,0,0,.28)}
+.hero{display:flex;flex-direction:column;gap:12px}
+.hero h2{margin:0;font-size:24px;line-height:1.15}
+.hero p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+.hero-actions{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:rgba(9,12,20,.8);color:var(--text);border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer;transition:all .18s ease}
+.chip:hover{border-color:rgba(105,215,255,.55);transform:translateY(-1px)}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.metric{background:rgba(10,13,22,.92);border:1px solid var(--line);border-radius:14px;padding:12px}
+.metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.metric .value{margin-top:6px;font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
+.metric .sub{margin-top:4px;font-size:12px;color:var(--muted);line-height:1.5}
+.progress-wrap{margin-top:8px;height:10px;border-radius:999px;background:#1a2030;overflow:hidden;border:1px solid #2c3550}
+.progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+.progress-meta{display:flex;justify-content:space-between;gap:10px;margin-top:6px;font-size:11px;color:var(--muted)}
+.chat{min-height:0;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.msg{max-width:86%;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.5;animation:fadeIn .16s ease}
+.msg.user{align-self:flex-end;background:rgba(58,92,150,.42);border:1px solid rgba(105,215,255,.18)}
+.msg.system{align-self:flex-start;background:rgba(18,21,35,.96);border:1px solid var(--line);color:#d7dcf8}
+.msg.ok{border-left:3px solid var(--good)}
+.msg.warn{border-left:3px solid var(--warn)}
+.msg.highlight{border-left:3px solid var(--accent-2)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.input-bar{display:flex;gap:10px;padding-top:10px;flex-shrink:0}
+.composer{display:flex;flex-direction:column;gap:10px;padding-top:10px;flex-shrink:0}
+.composer textarea{width:100%;min-height:120px;resize:vertical;background:rgba(9,12,20,.92);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.55;outline:none;white-space:pre-wrap}
+.composer textarea:focus{border-color:rgba(105,215,255,.55);box-shadow:0 0 0 3px rgba(105,215,255,.08)}
+.composer-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.composer-toolbar button{border:none;border-radius:12px;padding:0 18px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700;cursor:pointer;min-height:42px}
+.composer-toolbar button.secondary{background:rgba(15,18,30,.92);color:var(--text);border:1px solid var(--line)}
+.composer-toolbar button:hover{filter:brightness(1.06)}
+.composer-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--muted);min-height:20px}
+.composer-meta strong{color:var(--text);font-weight:600}
+.composer-note{font-size:12px;color:var(--muted);line-height:1.5}
+.quick-actions{display:flex;flex-wrap:wrap;gap:8px}
+.quick-actions .chip{padding:7px 11px}
+.teach-flow{display:none;flex-direction:column;gap:10px;margin-top:10px;padding:14px;border:1px solid rgba(105,215,255,.18);border-radius:14px;background:rgba(8,11,18,.92)}
+.teach-flow.visible{display:flex}
+.teach-flow h3{margin:0;font-size:14px;line-height:1.35}
+.teach-flow p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.teach-flow textarea{width:100%;min-height:112px;resize:vertical;background:rgba(9,12,20,.96);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.5;outline:none;white-space:pre-wrap}
+.teach-flow textarea:focus{border-color:rgba(105,215,255,.55);box-shadow:0 0 0 3px rgba(105,215,255,.08)}
+.teach-flow-actions{display:flex;flex-wrap:wrap;gap:8px}
+.teach-flow-actions button{border:none;border-radius:10px;padding:0 14px;background:rgba(15,18,30,.92);color:var(--text);border:1px solid var(--line);min-height:38px;font-size:12px;cursor:pointer}
+.teach-flow-actions button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;border:none}
+.input-bar{display:none}
+.input-bar button:hover{filter:brightness(1.06)}
+.input-bar button:hover{filter:brightness(1.06)}
+.stack{display:flex;flex-direction:column;gap:14px;min-height:0}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);gap:14px}
+.story-list{display:grid;gap:10px}
+.story-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(9,12,20,.92)}
+.story-item strong{display:block;font-size:13px;margin-bottom:4px}
+.story-item span{font-size:12px;color:var(--muted);line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);background:rgba(9,12,20,.8)}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.graph{background:var(--good)}
+.dot.llm{background:var(--accent)}
+.dot.unsupported{background:var(--warn)}
+.dot.contradicted{background:var(--bad)}
+.conflict-feed{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.conflict-card{padding:14px;border-radius:16px;background:rgba(10,13,22,.95);border:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.conflict-card.contradicted{border-color:rgba(255,107,134,.5);box-shadow:0 0 0 1px rgba(255,107,134,.09) inset}
+.conflict-card.stale{opacity:.72}
+.conflict-card.low{border-style:dashed}
+.conflict-card h3{margin:0;font-size:14px}
+.conflict-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.conflict-tags{display:flex;flex-wrap:wrap;gap:6px}
+.trust-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.trust-toolbar input,.trust-toolbar select{background:rgba(9,12,20,.92);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;outline:none}
+.trust-toolbar input:focus,.trust-toolbar select:focus{border-color:rgba(105,215,255,.55);box-shadow:0 0 0 3px rgba(105,215,255,.08)}
+.trust-toolbar input{min-width:220px;flex:1}
+.trust-toolbar select{min-width:150px}
+.trust-toolbar button{border:none;border-radius:12px;padding:0 18px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700;cursor:pointer}
+.trust-json{margin:0;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.6;color:#d9e1ff;background:rgba(9,12,20,.9);border:1px solid var(--line);border-radius:14px;padding:14px;max-height:340px;overflow:auto}
+.trust-empty{font-size:12px;color:var(--muted);line-height:1.6}
+.trust-raw-details summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:8px;outline:none;user-select:none}
+.trust-raw-details summary:hover{color:var(--text)}
+.trust-list{display:grid;gap:10px}
+.trust-item{padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(9,12,20,.92)}
+.trust-item strong{display:block;font-size:13px;margin-bottom:4px}
+.trust-item span{font-size:12px;color:var(--muted);line-height:1.5}
+.trust-label{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:#151c2b;color:#cfd5f7;font-size:11px;margin-right:6px;margin-top:4px}
+.tag{font-size:11px;padding:4px 8px;border-radius:999px;background:#151c2b;border:1px solid var(--line);color:#cfd5f7}
+.tag.bad{background:rgba(255,107,134,.08);border-color:rgba(255,107,134,.35);color:#ffd2db}
+.tag.warn{background:rgba(255,191,105,.08);border-color:rgba(255,191,105,.35);color:#ffe4b3}
+.tag.good{background:rgba(103,211,154,.08);border-color:rgba(103,211,154,.35);color:#cff4df}
+#graph-panel{position:relative;background:#070910}
+#graph-svg{width:100%;height:100%}
+.graph-controls{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:8px}
+.graph-controls button{padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(15,18,30,.92);color:var(--muted);cursor:pointer}
+.graph-controls button:hover{color:var(--text);border-color:rgba(105,215,255,.4)}
+.graph-info{position:absolute;left:14px;bottom:14px;max-width:320px;background:rgba(8,10,18,.92);border:1px solid var(--line);border-radius:14px;padding:12px;display:none;box-shadow:0 12px 30px rgba(0,0,0,.28)}
+.graph-info.visible{display:block}
+.graph-info strong{display:block;margin-bottom:6px;font-size:14px}
+.graph-info .meta{font-size:12px;color:var(--muted);line-height:1.5}
+.graph-info .edge-list{margin-top:8px;display:grid;gap:4px;max-height:150px;overflow-y:auto}
+.graph-info .edge-item{font-size:11px;color:#cfd5f7}
+.graph-stats{position:absolute;top:14px;left:14px;padding:8px 12px;border-radius:12px;background:rgba(8,10,18,.72);border:1px solid rgba(255,255,255,.06);font-size:11px;color:var(--muted)}
+.node circle{stroke-width:1.5;cursor:pointer;transition:transform .2s ease, opacity .2s ease, stroke .2s ease, fill .2s ease}
+.node text{font-size:10px;fill:#99a0c4;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.node:hover text{fill:var(--text)}
+.node.contradicted circle{stroke:var(--bad);stroke-width:2.4;fill:rgba(255,107,134,.12)}
+.node.stale circle{opacity:.45}
+.node.low-confidence circle{stroke-dasharray:4 3}
+.link{stroke-opacity:.46;stroke-width:1.05}
+.link.tur{stroke:#9d68ff}
+.link.yapabilir{stroke:#69d7ff}
+.link.benzer{stroke:#67d39a}
+.link.ozellik{stroke:#ffbf69}
+.link.hipotez{stroke:#ff9a5f;stroke-dasharray:4 2}
+.link.degil{stroke:#ff6b86;stroke-dasharray:6 3}
+.link.low-confidence{stroke-opacity:.24}
+.link.contradicted{stroke-width:1.8}
+@media (max-width: 980px){
+  body{overflow:auto}
+  .shell,.split{grid-template-columns:1fr}
+  #graph-panel{min-height:70vh}
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand">
+    <h1>AXIOM</h1>
+    <div class="subtitle">AXIOM cevap vermez. Düşünceni yargılar.</div>
+  </div>
+  <div class="header-stats" id="hdr-stats">yükleniyor...</div>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="judge">Fikrini Yargılat</button>
+  <button class="tab" data-tab="advocate">Şeytan'ın Avukatı</button>
+  <button class="tab" data-tab="conflicts">Geçmiş Çelişkiler</button>
+  <button class="tab" data-tab="graph">Hafıza / Graph</button>
+  <button class="tab" data-tab="trust">Trust Dashboard</button>
+</nav>
+
+<section class="panel active" id="judge-panel">
+  <div class="shell">
+    <div class="stack">
+      <div class="card hero">
+        <h2>Fikrini yargılat</h2>
+        <p>Bir iddia yaz, AXIOM graf ile doğrulasın. Bilmediğini uydurmasın, bildiğini ayırıp sonucu açıkça raporlasın.</p>
+        <div class="hero-actions">
+          <button class="chip" data-preset="öğret: kedi hayvandır">Öğret</button>
+          <button class="chip" data-preset="sor: kedi nedir">Sor</button>
+          <button class="chip" data-preset="llm-sor: kedi neden uyur?">LLM sor</button>
+        </div>
+      </div>
+      <div class="dashboard" id="judge-dashboard"></div>
+      <div class="card">
+        <div class="chat" id="judge-chat"></div>
+        <div class="composer">
+          <textarea id="judge-input" placeholder="Bir iddia yaz: ‘React Native production için iyi bir seçimdir’" maxlength="4000"></textarea>
+          <div class="composer-toolbar">
+            <button id="judge-send">Yargılat</button>
+            <button id="judge-file-button" type="button" class="secondary">Dosya seç</button>
+            <input id="judge-file-input" type="file" accept=".txt,.md,text/plain,text/markdown" hidden />
+          </div>
+          <div class="composer-meta" id="judge-file-meta">Dosya tarayıcıda okunur; otomatik olarak sunucuya yüklenmez.</div>
+          <div class="quick-actions" id="judge-quick-actions" hidden>
+            <button class="chip" data-quick-action="judge">Yargılat</button>
+            <button class="chip" data-quick-action="devil">Şeytan'ın Avukatı</button>
+            <button class="chip" data-quick-action="search">Hafızada ara</button>
+          </div>
+          <div class="composer-note">Kısa not: `.txt` veya `.md` dosyasını seç, içerik alana gelsin; sonra mevcut akışla yargılat.</div>
+          <section class="teach-flow" id="teach-flow" hidden>
+            <div>
+              <h3>Bilmiyorum - öğretme taslağı</h3>
+              <p>Bilmiyorum - uydurmuyorum. Bu bilgi AXIOM’un graph'ında yok. İstersen öğretme taslağı oluşturabilirsin.</p>
+            </div>
+            <textarea id="teach-draft-input" aria-label="Öğretme taslağı"></textarea>
+            <p>Bu taslak henüz AXIOM hafızasına yazılmadı. Kalıcı öğrenme için review / approval gerekir.</p>
+            <div class="teach-flow-actions">
+              <button type="button" class="primary" id="teach-draft-copy">Taslağı kopyala</button>
+              <button type="button" id="teach-draft-reset">Sıfırla</button>
+              <button type="button" id="teach-draft-hide">Kapat</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:8px">Anlamlı çıktı</strong>
+        <div class="story-list">
+          <div class="story-item"><strong>graph-backed</strong><span>Bilgi graf üzerinde doğrulanıyor.</span></div>
+          <div class="story-item"><strong>llm-assisted</strong><span>LLM destekli ama AXIOM bunu etiketliyor.</span></div>
+          <div class="story-item"><strong>unsupported</strong><span>Graf bilmiyor; uydurma yok.</span></div>
+          <div class="story-item"><strong>contradicted</strong><span>Graf ile çelişen cevaplar otomatik öğrenilmez.</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:8px">Hızlı eylemler</strong>
+        <div class="story-list">
+          <div class="story-item"><strong>Şeytan'ın Avukatı</strong><span>Bir fikri en güçlü karşı argümanla zorla.</span></div>
+          <div class="story-item"><strong>Geçmiş Çelişkiler</strong><span>Eski kararları ve zayıf kanıtları takip et.</span></div>
+          <div class="story-item"><strong>Hafıza / Graph</strong><span>Düğümler, kenarlar ve kanıt zinciri tek ekranda.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="advocate-panel">
+  <div class="shell" style="grid-template-columns:1.2fr .8fr">
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:22px">Şeytan'ın Avukatı</h2>
+      <p style="margin:0 0 14px;color:var(--muted);font-size:13px;line-height:1.6">
+        Amaç cevap vermek değil, fikri zorlamak. En iyi karşı argümanı üretmek için grafı kullan; graf zayıfsa bunu açıkça söyle.
+      </p>
+      <div class="legend" style="margin-bottom:14px">
+        <span class="pill"><span class="dot graph"></span>graph-backed</span>
+        <span class="pill"><span class="dot llm"></span>llm-assisted</span>
+        <span class="pill"><span class="dot unsupported"></span>unsupported</span>
+        <span class="pill"><span class="dot contradicted"></span>contradicted</span>
+      </div>
+      <div class="story-list">
+        <div class="story-item"><strong>Örnek</strong><span>tartış: AXIOM motor değil ana ürün olmalı</span></div>
+        <div class="story-item"><strong>Örnek</strong><span>çelişki: önceki karar ile yeni hedef çelişiyor mu?</span></div>
+        <div class="story-item"><strong>Örnek</strong><span>tartış: bu karar hangi kanıtla destekleniyor?</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <strong style="display:block;font-size:14px;margin-bottom:10px">Hazır sorgular</strong>
+      <div class="story-list">
+        <button class="chip" data-preset="tartış: AXIOM motor değil ana ürün olmalı">Motor değil</button>
+        <button class="chip" data-preset="tartış: bu repo neden var?">Repo amacı</button>
+        <button class="chip" data-preset="tartış: bu karar hangi kanıta dayanıyor?">Karar dayanağı</button>
+        <button class="chip" data-preset="çelişki: önceki karar ile bu karar uyumlu mu?">Çelişki sorgusu</button>
+      </div>
+      <div class="story-item" style="margin-top:12px">
+        <strong>Çalışma kuralı</strong>
+        <span>Unsupported veya contradicted çıktılar otomatik öğrenmeye gitmez. AXIOM bunu saklar, etiketler ve kullanıcıya açıkça gösterir.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel scrollable" id="conflicts-panel">
+  <div class="shell" style="grid-template-columns:1fr">
+    <div class="card">
+      <h2 style="margin:0 0 8px;font-size:22px">Geçmiş çelişkiler</h2>
+      <p style="margin:0;color:var(--muted);font-size:13px;line-height:1.6">
+        Graph verisinden türetilen çoklu-tür, negasyon, düşük güven ve eski düğüm sinyalleri burada görünür. Bu ekran ürün yüzünde “neden” sorusuna cevap vermek için var.
+      </p>
+    </div>
+    <div class="dashboard" id="conflict-dashboard"></div>
+    <div class="conflict-feed" id="conflict-feed"></div>
+  </div>
+</section>
+
+<section class="panel" id="graph-panel">
+  <svg id="graph-svg"></svg>
+  <div class="graph-stats" id="graph-stats"></div>
+  <div class="graph-controls">
+    <button id="graph-refresh">Yenile</button>
+    <button id="graph-reset">Sıfırla</button>
+    <button id="graph-labels">Etiket</button>
+  </div>
+  <div class="graph-info" id="graph-info">
+    <strong id="info-title"></strong>
+    <div class="meta" id="info-meta"></div>
+    <div class="edge-list" id="info-edges"></div>
+  </div>
+</section>
+
+<section class="panel scrollable" id="trust-panel">
+  <div class="shell" style="grid-template-columns:minmax(0,1.2fr) minmax(300px,.88fr)">
+    <div class="stack">
+      <div class="card hero">
+        <h2>Trust Dashboard</h2>
+        <p>Every serious answer should come with a receipt. Kaynağı, audit izini, candidate durumunu ve graph kabul durumunu burada oku; değiştirme.</p>
+        <div class="trust-toolbar">
+          <select id="trust-mode">
+            <option value="targetId">targetId</option>
+            <option value="sourceRef">sourceRef</option>
+            <option value="provenanceId">provenanceId</option>
+          </select>
+          <input id="trust-input" placeholder="sourceRef ya da targetId" maxlength="300" />
+          <input id="trust-workspace" placeholder="workspaceId (default)" maxlength="80" value="default" style="flex:0 0 180px;min-width:180px" />
+          <button id="trust-search">Ara</button>
+        </div>
+      </div>
+      <div class="dashboard" id="trust-dashboard"></div>
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:10px">Trust Receipt</strong>
+        <details class="trust-raw-details">
+          <summary>Raw JSON Göster/Gizle</summary>
+          <pre class="trust-json" id="trust-receipt">Bir sorgu gir, Trust Receipt burada görünsün.</pre>
+        </details>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:10px">Provenance Summary</strong>
+        <div class="trust-list" id="trust-provenance"></div>
+      </div>
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:10px">Audit Trail</strong>
+        <div class="trust-list" id="trust-audit"></div>
+      </div>
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:10px">Candidate Claim</strong>
+        <div class="trust-list" id="trust-candidate"></div>
+      </div>
+      <div class="card">
+        <strong style="display:block;font-size:14px;margin-bottom:10px">Conflict</strong>
+        <div class="trust-list" id="trust-conflict"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const tabs = Array.from(document.querySelectorAll('.tab'));
+const panels = {
+  judge: document.getElementById('judge-panel'),
+  advocate: document.getElementById('advocate-panel'),
+  conflicts: document.getElementById('conflicts-panel'),
+  graph: document.getElementById('graph-panel'),
+  trust: document.getElementById('trust-panel'),
+};
+
+let graphData = { nodes: [], links: [] };
+let simulation = null;
+let svg = null;
+let g = null;
+let showLabels = true;
+let currentTransform = d3.zoomIdentity;
+let trustReceiptState = null;
+const judgeInput = document.getElementById('judge-input');
+const judgeFileInput = document.getElementById('judge-file-input');
+const judgeFileButton = document.getElementById('judge-file-button');
+const judgeFileMeta = document.getElementById('judge-file-meta');
+const judgeQuickActions = document.getElementById('judge-quick-actions');
+const teachFlow = document.getElementById('teach-flow');
+const teachDraftInput = document.getElementById('teach-draft-input');
+const teachDraftCopy = document.getElementById('teach-draft-copy');
+const teachDraftReset = document.getElementById('teach-draft-reset');
+const teachDraftHide = document.getElementById('teach-draft-hide');
+let lastPromptText = '';
+
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function relationKey(value) {
+  return normalizeText(value);
+}
+
+function endpointId(value) {
+  if (value && typeof value === 'object') return value.id || value.name || '';
+  return String(value || '');
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function switchTab(name) {
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  Object.entries(panels).forEach(([key, panel]) => panel.classList.toggle('active', key === name));
+  if (name === 'graph') loadGraph();
+  if (name === 'conflicts') loadConflicts();
+  if (name === 'judge') loadStatus();
+  if (name === 'trust') loadTrustReceipt();
+}
+
+tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+
+function addMessage(text, kind = 'system') {
+  const chat = document.getElementById('judge-chat');
+  if (!chat) return;
+  const div = document.createElement('div');
+  div.className = `msg ${kind}`;
+  div.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function setFileMeta(fileName, textLength) {
+  if (!judgeFileMeta) return;
+  if (!fileName) {
+    judgeFileMeta.textContent = 'Dosya tarayıcıda okunur; otomatik olarak sunucuya yüklenmez.';
+    return;
+  }
+  const chars = Number(textLength || 0).toLocaleString('tr-TR');
+  judgeFileMeta.innerHTML = `<strong>${escapeHtml(fileName)}</strong> · ${chars} karakter · Dosya tarayıcıda okunur; otomatik olarak sunucuya yüklenmez.`;
+}
+
+function showQuickActions(visible) {
+  if (!judgeQuickActions) return;
+  judgeQuickActions.hidden = !visible;
+}
+
+function showTeachFlow(promptText, resultText) {
+  if (!teachFlow || !teachDraftInput) return;
+  const source = String(promptText || '').trim() || 'Bu bilgi';
+  const draft = [
+    `İddia: ${source}`,
+    'Durum: Bilmiyorum - uydurmuyorum.',
+    'Açıklama: Bu bilgi AXIOM’un graph’ında yok.',
+    'Not: Bu taslak henüz AXIOM hafızasına yazılmadı. Kalıcı öğrenme için review / approval gerekir.',
+    'Öneri: Kaynak, gerekçe ve kısa tanımı ekleyerek öğretme taslağı oluşturabilirsin.',
+  ].join('\n');
+  teachDraftInput.value = draft;
+  teachFlow.hidden = false;
+  teachFlow.classList.add('visible');
+}
+
+function hideTeachFlow(clear = false) {
+  if (!teachFlow || !teachDraftInput) return;
+  if (clear) teachDraftInput.value = '';
+  teachFlow.classList.remove('visible');
+  teachFlow.hidden = true;
+}
+
+function isUnknownResultText(text) {
+  return /\b(bilmiyorum|bilinmiyor|doğrulayamıyor|doğrulayamıyorum)\b/i.test(String(text || ''));
+}
+
+function friendlyServerMessage(status) {
+  if (status === 401 || status === 403) {
+    return 'Bu işlem yetki gerektiriyor. Local demo’da önce metni alana aktarabilir ve yargılatabilirsin.';
+  }
+  if (status === 400) {
+    return 'AXIOM bu bilgiyi güvenli biçimde doğrulayamıyor.';
+  }
+  if (status === 413) {
+    return 'Dosya çok büyük. Şimdilik daha küçük bir `.txt` veya `.md` dosyası seç.';
+  }
+  if (status === 429) {
+    return 'Çok fazla istek. Biraz bekleyip tekrar dene.';
+  }
+  return 'Sunucuya ulaşılamadı. Local server çalışıyor mu kontrol et: `node server.js`';
+}
+
+function normalizeResultText(resultText) {
+  const text = String(resultText || '');
+  if (/Boş girdi/i.test(text)) return 'Önce bir metin gir veya bir dosya seç.';
+  if (/Anlamadım/i.test(text)) return 'Bilmiyorum - uydurmuyorum. Bu bilgiyi güvenli biçimde doğrulayamıyorum.';
+  return text;
+}
+
+function importFileToInput(file) {
+  if (!file) return;
+  const name = String(file.name || '');
+  if (!/\.(txt|md)$/i.test(name)) {
+    addMessage('Şimdilik sadece `.txt` ve `.md` dosyaları destekleniyor.', 'system warn');
+    setFileMeta('', 0);
+    showQuickActions(false);
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result || '');
+    if (judgeInput) {
+      judgeInput.value = text;
+      judgeInput.focus();
+    }
+    setFileMeta(name, text.length);
+    showQuickActions(true);
+    addMessage(`Dosya alındı: ${name}`, 'system ok');
+  };
+  reader.onerror = () => {
+    addMessage('Dosya okunamadı. Lütfen tekrar dene.', 'system warn');
+    setFileMeta('', 0);
+    showQuickActions(false);
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+function queuePrompt(prompt) {
+  if (!judgeInput) return;
+  judgeInput.value = prompt;
+  switchTab('judge');
+  judgeInput.focus();
+}
+
+async function runPrompt(value) {
+  const raw = typeof value === 'string' ? value : String(judgeInput?.value || '').trim();
+  if (!raw) {
+    addMessage('Önce bir metin gir veya bir dosya seç.', 'system warn');
+    return;
+  }
+  if (/^(yukle|yükle)\s*:/i.test(raw)) {
+    addMessage('Dosya adını yazmak yetmez. Lütfen “Dosya seç” ile dosyayı tarayıcıdan seç.', 'system warn');
+    return;
+  }
+  if (judgeInput) judgeInput.value = '';
+  lastPromptText = raw;
+  addMessage(raw, 'user');
+  try {
+    const res = await fetch('/api?' + new URLSearchParams({ q: raw }));
+    if (res.status === 429) {
+      addMessage(friendlyServerMessage(429), 'system warn');
+      return;
+    }
+    if (!res.ok) {
+      addMessage(friendlyServerMessage(res.status), 'system warn');
+      return;
+    }
+    const data = await res.json();
+    const resultText = normalizeResultText(data.result);
+    let cls = isUnknownResultText(resultText) ? 'system warn' : 'system';
+    if (typeof resultText === 'string' && resultText.startsWith('✅')) cls = 'system ok';
+    else if (typeof resultText === 'string' && resultText.startsWith('⚠')) cls = 'system warn';
+    else if (typeof resultText === 'string' && (resultText.startsWith('❗') || resultText.startsWith('❌'))) cls = 'system highlight';
+    addMessage(resultText, cls);
+    if (isUnknownResultText(resultText)) showTeachFlow(raw, resultText);
+    else hideTeachFlow(false);
+    await updateHeaderStats();
+  } catch (err) {
+    hideTeachFlow(false);
+    addMessage(friendlyServerMessage(0), 'system warn');
+  }
+}
+
+document.getElementById('judge-send').addEventListener('click', () => runPrompt());
+judgeInput?.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    runPrompt();
+  }
+});
+judgeFileButton?.addEventListener('click', () => judgeFileInput?.click());
+judgeFileInput?.addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) {
+    setFileMeta('', 0);
+    showQuickActions(false);
+    return;
+  }
+  importFileToInput(file);
+  e.target.value = '';
+});
+teachDraftCopy?.addEventListener('click', async () => {
+  if (!teachDraftInput) return;
+  const text = teachDraftInput.value.trim();
+  if (!text) {
+    addMessage('Önce bir metin gir veya bir sorgu çalıştır.', 'system warn');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    addMessage('Öğretme taslağı kopyalandı.', 'system ok');
+  } catch (_) {
+    teachDraftInput.focus();
+    teachDraftInput.select?.();
+    addMessage('Öğretme taslağı seçildi. Kopyalamak için Ctrl+C kullanabilirsin.', 'system warn');
+  }
+});
+teachDraftReset?.addEventListener('click', () => {
+  if (!teachDraftInput) return;
+  teachDraftInput.value = lastPromptText
+    ? `İddia: ${lastPromptText}\nDurum: Bilmiyorum - uydurmuyorum.\nAçıklama: Bu bilgi AXIOM’un graph’ında yok.\nNot: Bu taslak henüz AXIOM hafızasına yazılmadı. Kalıcı öğrenme için review / approval gerekir.\nÖneri: Kaynak, gerekçe ve kısa tanımı ekleyerek öğretme taslağı oluşturabilirsin.`
+    : '';
+  addMessage('Öğretme taslağı sıfırlandı.', 'system');
+});
+teachDraftHide?.addEventListener('click', () => hideTeachFlow(true));
+document.querySelectorAll('[data-quick-action]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const action = btn.dataset.quickAction;
+    if (action === 'judge') {
+      runPrompt();
+      return;
+    }
+    if (action === 'devil') {
+      const text = String(judgeInput?.value || '').trim();
+      queuePrompt(text ? `tartış: ${text.slice(0, 220)}` : 'tartış: bu fikri zorla');
+      switchTab('advocate');
+      return;
+    }
+    if (action === 'search') {
+      switchTab('graph');
+    }
+  });
+});
+document.querySelectorAll('[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => queuePrompt(btn.dataset.preset));
+});
+document.getElementById('graph-refresh').addEventListener('click', loadGraph);
+document.getElementById('graph-reset').addEventListener('click', resetZoom);
+document.getElementById('graph-labels').addEventListener('click', toggleLabels);
+document.getElementById('trust-search').addEventListener('click', loadTrustReceipt);
+document.getElementById('trust-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadTrustReceipt();
+});
+document.getElementById('trust-mode').addEventListener('change', () => {
+  if (trustReceiptState) loadTrustReceipt();
+});
+document.getElementById('trust-workspace').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadTrustReceipt();
+});
+
+addMessage('Hoş geldin. Bir iddia yaz ya da Dosya seç ile yerel metni alana aktar.', 'system');
+
+async function updateHeaderStats() {
+  try {
+    const [graphRes, statusRes] = await Promise.all([
+      fetch('/graph-data'),
+      fetch('/v2-status'),
+    ]);
+    const graph = await graphRes.json();
+    const status = await statusRes.json();
+    graphData = graph;
+    document.getElementById('hdr-stats').textContent =
+      `${graph.nodes.length} düğüm · ${graph.links.length} kenar · ${status.version || 'v?'}`;
+    renderJudgeDashboard(status);
+  } catch (_) {}
+}
+
+function renderJudgeDashboard(status) {
+  const target = document.getElementById('judge-dashboard');
+  if (!target) return;
+  const agentV3 = status.agentV3Status || {};
+  const lastPlan = agentV3.lastPlan || null;
+  const lastRun = agentV3.lastRun || null;
+  target.innerHTML = [
+    card('Sürüm', `${escapeHtml(status.version || '?')}`, `Contract: ${escapeHtml(status.contractVersion || '?')}`),
+    card('Kernel', `${escapeHtml(status.activeKernel || '?')}`, `Backend: ${escapeHtml(status.backend || '?')} · ${status.nodes || 0} node / ${status.edges || 0} edge`),
+    card('Agent V3', `${agentV3.goals || 0} hedef`, `${agentV3.runs || 0} çalışma · ${agentV3.checkpoints || 0} kontrol noktası`),
+    card('Test', `${escapeHtml(status.testStatus || '?')}`, `Son commit: ${escapeHtml(status.lastCommit || '?')}`),
+    card('Odak', `${escapeHtml(status.currentFocus || '?')}`, `${escapeHtml(status.nextAction || '?')}`),
+    card('Güncelleme', 'canlı', `${escapeHtml(status.updatedAt || '?')}`),
+  ].join('');
+
+  if (lastPlan || lastRun) {
+    const extra = document.createElement('div');
+    extra.className = 'story-item';
+    extra.innerHTML = `<strong>Son çalışma</strong><span>${escapeHtml(lastPlan ? `${lastPlan.goal || '?'} · ${lastPlan.steps || 0} adım` : '')}${lastPlan && lastRun ? '<br>' : ''}${escapeHtml(lastRun ? `${lastRun.goal || '?'} · ${lastRun.completedSteps || 0} adım · ${lastRun.status || '?'}` : '')}</span>`;
+    target.appendChild(extra);
+  }
+}
+
+function card(label, value, sub) {
+  return `<div class="metric"><div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(value)}</div><div class="sub">${escapeHtml(sub)}</div></div>`;
+}
+
+async function loadStatus() {
+  try {
+    const res = await fetch('/v2-status');
+    const data = await res.json();
+    renderJudgeDashboard(data);
+  } catch (_) {}
+}
+
+function trustEmptyMessage(message) {
+  return `<div class="trust-empty">${escapeHtml(message)}</div>`;
+}
+
+function renderTrustList(targetId, items, emptyMessage) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  if (!items || items.length === 0) {
+    target.innerHTML = trustEmptyMessage(emptyMessage);
+    return;
+  }
+  target.innerHTML = items.map((item) => {
+    const title = item.title || item.kind || item.eventType || item.targetType || 'item';
+    const body = item.body || item.text || item.reason || item.claim || '';
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    return `
+      <div class="trust-item">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(body)}</span>
+        ${tags.length ? `<div style="margin-top:6px">${tags.map(tag => `<span class="trust-label">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderTrustSummary(receipt) {
+  const target = document.getElementById('trust-dashboard');
+  if (!target) return;
+  if (!receipt) {
+    target.innerHTML = [
+      card('Durum', 'unknown', 'Bir sorgu çalıştırılmadı'),
+      card('Workspace', 'default', 'Sorgu bekleniyor'),
+      card('Kanıt', '0', 'Audit yok'),
+      card('Kaynak', '—', 'sourceRef / targetId gir'),
+    ].join('');
+    return;
+  }
+  target.innerHTML = [
+    card('Durum', receipt.status || 'unknown', `canonical: ${receipt.canonical ? 'yes' : 'no'}`),
+    card('Workspace', receipt.workspaceId || 'default', `policy: ${receipt.trustPolicyVersion || '—'}`),
+    card('Güven', Number(receipt.confidence ?? 0.5).toFixed(2), `audit: ${Array.isArray(receipt.auditTrail) ? receipt.auditTrail.length : 0}`),
+    card('Kaynak', receipt.provenance?.sourceType || '—', receipt.provenance?.sourceRef || receipt.targetId || '—'),
+  ].join('');
+}
+
+function renderTrustReceipt(receipt) {
+  trustReceiptState = receipt || null;
+  renderTrustSummary(receipt);
+  const pre = document.getElementById('trust-receipt');
+  if (pre) {
+    pre.textContent = receipt ? JSON.stringify(receipt, null, 2) : 'Bir sorgu gir, Trust Receipt burada görünsün.';
+  }
+  renderTrustList('trust-provenance', receipt?.provenance ? [{
+    title: `${receipt.provenance.sourceType || 'source'} provenance`,
+    body: `${receipt.provenance.sourceRef || '—'} · actor: ${receipt.provenance.actor || 'system'} · confidence: ${Number(receipt.provenance.confidence ?? 0.5).toFixed(2)}`,
+    tags: [
+      receipt.provenance.sourceSubType || null,
+      receipt.provenance.workspaceId || null,
+      receipt.provenance.trustPolicyVersion || null,
+    ].filter(Boolean),
+  }] : [], 'Provenance bulunamadı.');
+  renderTrustList('trust-audit', Array.isArray(receipt?.auditTrail) ? receipt.auditTrail.slice(0, 8).map((event) => ({
+    title: `${event.eventType || 'AUDIT'} · ${event.targetType || 'target'}`,
+    body: `${event.targetId || '—'} · ${event.sourceRef || '—'} · ${event.timestamp || '—'}`,
+    tags: [event.workspaceId || 'default', event.actor || 'system'].filter(Boolean),
+  })) : [], 'Audit izi bulunamadı.');
+  renderTrustList('trust-candidate', receipt?.candidateClaim ? [{
+    title: `${receipt.candidateClaim.status || 'unknown'} · ${receipt.candidateClaim.recommendation || 'accept'}`,
+    body: receipt.candidateClaim.claim || receipt.candidateClaim.candidateId || '—',
+    tags: [
+      receipt.candidateClaim.candidateId || null,
+      receipt.candidateClaim.workspaceId || null,
+      receipt.candidateClaim.provenance?.sourceRef || null,
+    ].filter(Boolean),
+  }] : [], 'Candidate claim bulunamadı.');
+  renderTrustList('trust-conflict', receipt?.conflict ? [{
+    title: 'Conflict',
+    body: typeof receipt.conflict === 'string' ? receipt.conflict : (receipt.conflict.reason || JSON.stringify(receipt.conflict)),
+    tags: [
+      receipt.status || 'unknown',
+      receipt.canonical ? 'canonical' : 'non-canonical',
+    ],
+  }] : [], 'Conflict yok.');
+}
+
+function buildTrustQuery() {
+  const mode = document.getElementById('trust-mode')?.value || 'targetId';
+  const raw = document.getElementById('trust-input')?.value.trim() || '';
+  const workspaceId = document.getElementById('trust-workspace')?.value.trim() || 'default';
+  const params = new URLSearchParams();
+  params.set(mode, raw);
+  params.set('workspaceId', workspaceId || 'default');
+  return { mode, raw, workspaceId, params };
+}
+
+async function loadTrustReceipt() {
+  const input = document.getElementById('trust-input');
+  const raw = input ? input.value.trim() : '';
+  if (!raw) {
+    renderTrustReceipt(null);
+    return;
+  }
+  const { params, mode, workspaceId } = buildTrustQuery();
+  try {
+    const res = await fetch('/api/trust-receipt?' + params.toString());
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      const errorText = data?.error?.message || 'Trust sorgusu başarısız.';
+      renderTrustReceipt({
+        receiptId: 'error',
+        targetType: 'error',
+        targetId: raw,
+        claim: errorText,
+        status: 'unknown',
+        workspaceId,
+        provenance: null,
+        trustPolicyVersion: '',
+        confidence: 0,
+        auditTrail: [],
+        conflict: data?.error || null,
+        candidateClaim: null,
+        canonical: false,
+        generatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+    renderTrustReceipt(data.data);
+    if (mode === 'sourceRef') {
+      document.getElementById('trust-input').title = 'sourceRef sorgusu işlendi';
+    }
+  } catch (err) {
+    renderTrustReceipt({
+      receiptId: 'error',
+      targetType: 'error',
+      targetId: raw,
+      claim: err.message || 'Trust sorgusu başarısız.',
+      status: 'unknown',
+      workspaceId,
+      provenance: null,
+      trustPolicyVersion: '',
+      confidence: 0,
+      auditTrail: [],
+      conflict: null,
+      candidateClaim: null,
+      canonical: false,
+      generatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+function analyzeGraph(data) {
+  const outgoing = new Map();
+  const incident = new Map();
+  for (const node of data.nodes) {
+    outgoing.set(node.id, []);
+    incident.set(node.id, []);
+  }
+  for (const link of data.links) {
+    const from = endpointId(link.source);
+    const to = endpointId(link.target);
+    if (!outgoing.has(from)) outgoing.set(from, []);
+    if (!incident.has(from)) incident.set(from, []);
+    if (!incident.has(to)) incident.set(to, []);
+    outgoing.get(from).push(link);
+    incident.get(from).push(link);
+    incident.get(to).push(link);
+  }
+
+  const now = Date.now();
+  data.nodes.forEach(node => {
+    const out = outgoing.get(node.id) || [];
+    const inc = incident.get(node.id) || [];
+    const typeCount = out.filter(link => relationKey(link.relation) === 'tur').length;
+    const negCount = out.filter(link => relationKey(link.relation) === 'degil').length;
+    const anyLow = (node.confidence ?? node.weight ?? 0.5) < 0.35 || [...out, ...inc].some(link => (link.confidence ?? link.weight ?? 0.5) < 0.35);
+    const stale = node.last_seen ? (now - Date.parse(node.last_seen) > 30 * 24 * 60 * 60 * 1000) : false;
+    node.__flags = {
+      contradiction: typeCount > 1 || (negCount > 0 && out.some(link => relationKey(link.relation) !== 'degil')),
+      lowConfidence: anyLow,
+      stale,
+    };
+  });
+
+  data.links.forEach(link => {
+    link.__flags = {
+      lowConfidence: (link.confidence ?? link.weight ?? 0.5) < 0.35,
+      contradiction: relationKey(link.relation) === 'degil',
+    };
+  });
+}
+
+async function loadGraph() {
+  try {
+    const res = await fetch('/graph-data');
+    graphData = await res.json();
+    analyzeGraph(graphData);
+    renderGraph(graphData);
+    document.getElementById('graph-stats').textContent = `${graphData.nodes.length} düğüm · ${graphData.links.length} kenar`;
+  } catch (err) {
+    console.error('Graf yüklenemedi:', err);
+  }
+}
+
+function renderGraph(data) {
+  const container = document.getElementById('graph-panel');
+  const W = container.clientWidth || 800;
+  const H = container.clientHeight || 600;
+
+  d3.select('#graph-svg').selectAll('*').remove();
+  svg = d3.select('#graph-svg').attr('width', W).attr('height', H);
+
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 8])
+    .on('zoom', e => {
+      currentTransform = e.transform;
+      g.attr('transform', e.transform);
+    });
+  svg.call(zoom);
+  window._axiomZoom = zoom;
+  window._axiomSvg = svg;
+
+  g = svg.append('g');
+
+  const maxEdge = Math.max(1, ...data.nodes.map(n => n.edgeCount || 0));
+  const nodeRadius = node => 4 + ((node.edgeCount || 0) / maxEdge) * 12;
+
+  simulation = d3.forceSimulation(data.nodes)
+    .force('link', d3.forceLink(data.links).id(d => d.id).distance(82).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-120))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 4));
+
+  const link = g.append('g').selectAll('line')
+    .data(data.links)
+    .join('line')
+    .attr('class', d => {
+      const classes = ['link', relationKey(d.relation)];
+      if (d.__flags?.lowConfidence) classes.push('low-confidence');
+      if (d.__flags?.contradiction) classes.push('contradicted');
+      return classes.join(' ');
+    })
+    .attr('stroke', d => relationColor(d.relation))
+    .attr('stroke-width', d => 0.65 + ((d.confidence ?? d.weight ?? 0.5) * 1.25));
+
+  const node = g.append('g').selectAll('g')
+    .data(data.nodes)
+    .join('g')
+    .attr('class', d => {
+      const classes = ['node'];
+      if (d.__flags?.contradiction) classes.push('contradicted');
+      if (d.__flags?.stale) classes.push('stale');
+      if (d.__flags?.lowConfidence) classes.push('low-confidence');
+      return classes.join(' ');
+    })
+    .call(d3.drag()
+      .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+    )
+    .on('click', (_, d) => showNodeInfo(d));
+
+  node.append('circle')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => {
+      if (d.__flags?.contradiction) return 'rgba(255,107,134,.18)';
+      if (d.__flags?.stale) return 'rgba(120,125,160,.16)';
+      if ((d.confidence ?? d.weight ?? 0.5) < 0.35) return 'rgba(255,191,105,.14)';
+      return 'rgba(17,21,35,.95)';
+    })
+    .attr('stroke', d => {
+      if (d.__flags?.contradiction) return 'rgba(255,107,134,.95)';
+      if (d.__flags?.lowConfidence) return 'rgba(255,191,105,.85)';
+      if ((d.confidence ?? d.weight ?? 0.5) > 0.65) return 'rgba(105,215,255,.75)';
+      return '#2f3852';
+    });
+
+  const labels = node.append('text')
+    .text(d => d.label.length > 12 ? d.label.slice(0, 11) + '…' : d.label)
+    .attr('dy', d => nodeRadius(d) + 10)
+    .style('display', showLabels ? 'block' : 'none');
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  window._axiomLabels = labels;
+}
+
+function relationColor(rel) {
+  const key = relationKey(rel);
+  const map = {
+    tur: '#9d68ff',
+    yapabilir: '#69d7ff',
+    benzer: '#67d39a',
+    ozellik: '#ffbf69',
+    hipotez: '#ff9a5f',
+    degil: '#ff6b86',
+  };
+  return map[key] || '#44506f';
+}
+
+function showNodeInfo(node) {
+  const info = document.getElementById('graph-info');
+  const edges = graphData.links.filter(link => endpointId(link.source) === node.id || endpointId(link.target) === node.id);
+  const totalEvidence = edges.reduce((sum, link) => sum + (link.evidenceCount || 0), 0);
+  const sources = [...new Set(edges.map(link => link.source || link.sourceType || 'manual').filter(Boolean))];
+  document.getElementById('info-title').textContent = node.label;
+  document.getElementById('info-meta').innerHTML =
+    `Ağırlık: <strong>${Number(node.weight || 0).toFixed(2)}</strong><br>` +
+    `Güven: <strong>${Number(node.confidence || node.weight || 0).toFixed(2)}</strong><br>` +
+    `Kenar: <strong>${node.edgeCount || 0}</strong><br>` +
+    `Kanıt: <strong>${totalEvidence}</strong><br>` +
+    `Kaynak: <strong>${escapeHtml(sources.slice(0, 3).join(', ') || '—')}</strong><br>` +
+    `Son görülme: <strong>${escapeHtml(node.last_seen || '—')}</strong>`;
+  const edgeList = document.getElementById('info-edges');
+  edgeList.innerHTML = edges.slice(0, 10).map(edge => {
+    const from = endpointId(edge.source);
+    const to = endpointId(edge.target);
+    const label = `${from} —[${edge.relation}]→ ${to}`;
+    return `<div class="edge-item">${escapeHtml(label)}</div>`;
+  }).join('');
+  info.classList.add('visible');
+}
+
+function resetZoom() {
+  if (window._axiomSvg && window._axiomZoom) {
+    window._axiomSvg.transition().duration(350).call(window._axiomZoom.transform, d3.zoomIdentity);
+  }
+}
+
+function toggleLabels() {
+  showLabels = !showLabels;
+  if (window._axiomLabels) window._axiomLabels.style('display', showLabels ? 'block' : 'none');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.node') && !e.target.closest('.graph-info')) {
+    const info = document.getElementById('graph-info');
+    if (info) info.classList.remove('visible');
+  }
+});
+
+function buildConflictItems(data) {
+  const now = Date.now();
+  const out = new Map();
+  for (const node of data.nodes) out.set(node.id, []);
+  for (const link of data.links) {
+    const from = endpointId(link.source);
+    if (!out.has(from)) out.set(from, []);
+    out.get(from).push(link);
+  }
+  const items = [];
+  for (const node of data.nodes) {
+    const outgoing = out.get(node.id) || [];
+    const typeEdges = outgoing.filter(link => relationKey(link.relation) === 'tur');
+    const negEdges = outgoing.filter(link => relationKey(link.relation) === 'degil');
+    const lowConfidence = (node.confidence ?? node.weight ?? 0.5) < 0.35 || outgoing.some(link => (link.confidence ?? link.weight ?? 0.5) < 0.35);
+    const stale = node.last_seen ? (now - Date.parse(node.last_seen) > 30 * 24 * 60 * 60 * 1000) : false;
+
+    if (typeEdges.length > 1) {
+      items.push({
+        kind: 'contradicted',
+        title: `${node.label} için çoklu-tür çatışması`,
+        text: `Aynı düğüm altında birden fazla tür ilişkisi var. Bu durum graph-backed çelişki sinyali üretir.`,
+        tags: ['çoklu-tür', `confidence ${Number(node.confidence || node.weight || 0).toFixed(2)}`],
+      });
+    }
+    if (negEdges.length > 0 && outgoing.some(link => relationKey(link.relation) !== 'degil')) {
+      items.push({
+        kind: 'contradicted',
+        title: `${node.label} için negasyon çatışması`,
+        text: `Negasyon ilişkisinin yanında olumlu bir ilişki de var. Bu kombinasyon kullanıcıya açıkça gösterilmeli.`,
+        tags: ['negasyon', 'çelişki'],
+      });
+    }
+    if (lowConfidence) {
+      items.push({
+        kind: 'low',
+        title: `${node.label} düşük güven bölgesinde`,
+        text: `Bu düğümün ya da çevresindeki kenarların confidence değeri düşük. Ürün yüzünde soluk gösterilmeli.`,
+        tags: ['low-confidence', 'kanıt zayıf'],
+      });
+    }
+    if (stale) {
+      items.push({
+        kind: 'stale',
+        title: `${node.label} eski`,
+        text: `Son görülme tarihi eski. Hafıza panelinde bu düğümün pasif görünmesi daha doğru olur.`,
+        tags: ['stale', 'last_seen'],
+      });
+    }
+  }
+  return items.slice(0, 12);
+}
+
+async function loadConflicts() {
+  try {
+    const [graphRes, statusRes] = await Promise.all([fetch('/graph-data'), fetch('/v2-status')]);
+    const graph = await graphRes.json();
+    const status = await statusRes.json();
+    graphData = graph;
+    analyzeGraph(graphData);
+    renderConflictPanel(graphData, status);
+  } catch (err) {
+    const feed = document.getElementById('conflict-feed');
+    if (feed) {
+      feed.innerHTML = '<div class="story-item"><strong>Hata</strong><span>Çelişki ekranı yüklenemedi.</span></div>';
+    }
+  }
+}
+
+function renderConflictPanel(graph, status) {
+  const dash = document.getElementById('conflict-dashboard');
+  const feed = document.getElementById('conflict-feed');
+  const conflicts = buildConflictItems(graph);
+  if (dash) {
+    dash.innerHTML = [
+      card('Çelişki sinyali', `${conflicts.length}`, 'Graph üzerinden türetilen aktif çatışmalar'),
+      card('Düşük güven', `${graph.links.filter(l => (l.confidence ?? l.weight ?? 0.5) < 0.35).length}`, 'Zayıf kenarlar'),
+      card('Eski düğüm', `${graph.nodes.filter(n => n.last_seen && (Date.now() - Date.parse(n.last_seen) > 30 * 24 * 60 * 60 * 1000)).length}`, '30+ gün görmeyen düğümler'),
+      card('Durum', `${escapeHtml(status.currentFocus || '?')}`, `${escapeHtml(status.nextAction || '?')}`),
+    ].join('');
+  }
+  if (feed) {
+    feed.innerHTML = conflicts.length > 0
+      ? conflicts.map(item => `
+        <div class="conflict-card ${item.kind}">
+          <h3>${escapeHtml(item.title)}</h3>
+          <p>${escapeHtml(item.text)}</p>
+          <div class="conflict-tags">${item.tags.map(tag => `<span class="tag ${item.kind === 'contradicted' ? 'bad' : item.kind === 'low' ? 'warn' : ''}">${escapeHtml(tag)}</span>`).join('')}</div>
+        </div>
+      `).join('')
+      : '<div class="story-item"><strong>Çelişki yok</strong><span>Bu graph snapshot’ında belirgin bir çatışma görünmüyor.</span></div>';
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (document.getElementById('graph-panel').classList.contains('active')) loadGraph();
+});
+
+updateHeaderStats();
+loadStatus();
+</script>
+</body>
+</html>
